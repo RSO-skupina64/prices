@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "Primerjava",
+  "required": [
+    "status",
+    "message",
+    "products",
+    "texts"
+  ],
+  "properties": {
+    "status": {
+      "type": "boolean"
+    },
+    "message": {
+      "type": "string"
+    },
+    "products": {
+      "type": "object",
+      "existingJavaType": "java.util.List<com.rso.prices.Product>"
+    },
+    "texts": {
+      "type": "object",
+      "existingJavaType": "java.util.List<com.rso.prices.Text>"
+    }
+  }
+}

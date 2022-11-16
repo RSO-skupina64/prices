@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "Text",
+  "required": [
+    "block",
+    "id",
+    "part",
+    "text"
+  ],
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "part": {
+      "type": "string"
+    },
+    "block": {
+      "type": "string"
+    },
+    "text": {
+      "type": "string"
+    }
+  }
+}

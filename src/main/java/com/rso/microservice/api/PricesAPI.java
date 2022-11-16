@@ -1,8 +1,10 @@
 package com.rso.microservice.api;
 
+import com.google.gson.Gson;
 import com.rso.microservice.api.dto.ErrorDto;
 import com.rso.microservice.api.dto.MessageDto;
 import com.rso.microservice.api.dto.PricesShopRequestDto;
+import com.rso.prices.Comparison;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.info.Info;
@@ -16,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import javax.validation.Valid;
 
@@ -39,7 +42,15 @@ public class PricesAPI {
                     content = @Content(schema = @Schema(implementation = ErrorDto.class)))
     })
     public ResponseEntity<MessageDto> fetchProductPrices(@RequestHeader(HttpHeaders.AUTHORIZATION) String jwt) {
-        // todo: add code here
+        // todo jwt validation
+        // todo move to properties
+        String pricesApi = "https://www.nasasuperhrana.si/wp-admin/admin-ajax.php?action=products_data";
+        RestTemplate restTemplate = new RestTemplate();
+        String result = restTemplate.getForObject(pricesApi, String.class);
+
+        Gson gson = new Gson();
+        Comparison comparison = gson.fromJson(result, Comparison.class);
+
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 

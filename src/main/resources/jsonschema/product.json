@@ -1,0 +1,125 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "Product",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "ena_a": {
+      "type": "string"
+    },
+    "id_slika": {
+      "type": "string",
+      "format": "integer"
+    },
+    "kategorija": {
+      "type": "string"
+    },
+    "ime_produkta": {
+      "type": "string"
+    },
+    "novo_ime": {
+      "type": "string"
+    },
+    "ean": {
+      "type": "string"
+    },
+    "blagovna_znamka": {
+      "type": "string"
+    },
+    "dobavitelj": {
+      "type": "string"
+    },
+    "drzava_dobavitelja": {
+      "type": "string"
+    },
+    "proizvajalec": {
+      "type": "string"
+    },
+    "drzava_proizvajalca_poreklo": {
+      "type": "string"
+    },
+    "hranilna_vrednost_enota": {
+      "type": "string"
+    },
+    "energijska_vrednost_kJ": {
+      "type": "string",
+      "format": "integer"
+    },
+    "energijska_vrednost kcal": {
+      "type": "string",
+      "format": "integer"
+    },
+    "mascobe_g": {
+      "type": "string",
+      "format": "integer"
+    },
+    "nasicene_mascobe_g": {
+      "type": "string",
+      "format": "integer"
+    },
+    "ogljikovi_hidrati_g": {
+      "type": "string",
+      "format": "integer"
+    },
+    "sladkorji_g": {
+      "type": "string",
+      "format": "integer"
+    },
+    "beljakovine_g": {
+      "type": "string",
+      "format": "integer"
+    },
+    "sol_g": {
+      "type": "string",
+      "format": "integer"
+    },
+    "vrsta_pakiranja": {
+      "type": "string"
+    },
+    "teza_g": {
+      "type": "string"
+    },
+    "Enota teže pakiranja": {
+      "type": "string"
+    },
+    "enota": {
+      "type": "string"
+    },
+    "izbrana_kakovost": {
+      "type": "string"
+    },
+    "izbrana_kakovost_slovenija": {
+      "type": "string"
+    },
+    "ekoloski_proizvodi": {
+      "type": "string"
+    },
+    "zascitena_oznacba_porekla": {
+      "type": "string"
+    },
+    "zascitena_geografska_oznacba": {
+      "type": "string"
+    },
+    "zajamcena_tradicionalna_posebnost": {
+      "type": "string"
+    },
+    "oznacba_visje_kakovosti": {
+      "type": "string"
+    },
+    "integrirana_pridelava": {
+      "type": "string"
+    },
+    "vrsta_porekla": {
+      "type": "string"
+    },
+    "tip_znamke": {
+      "type": "string"
+    },
+    "prices": {
+      "type": "object",
+      "existingJavaType": "java.util.List<com.rso.prices.Price>"
+    }
+  }
+}

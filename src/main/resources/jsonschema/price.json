@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "Price",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "ena_a": {
+      "type": "string"
+    },
+    "trgovina": {
+      "type": "string"
+    },
+    "redna_cena_na_kos": {
+      "type": "string"
+    },
+    "redna_cena_na_kilogram_liter": {
+      "type": "string"
+    },
+    "akcijska_cena_na_kos": {
+      "type": "string"
+    },
+    "akcijska_cena_na_kilogram_liter": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string"
+    },
+    "kategorija": {
+      "type": "string"
+    },
+    "teza_g": {
+      "type": "string",
+      "format": "integer"
+    },
+    "količina (mL)": {
+      "type": "string"
+    },
+    "vrsta_popusta": {
+      "type": "string"
+    },
+    "drzava": {
+      "type": "string"
+    },
+    "enota": {
+      "type": "string"
+    },
+    "drzava_dolgo_ime": {
+      "type": "string"
+    },
+    "cena_kosarica": {
+      "type": "string"
+    },
+    "cena_kosarica_akcija": {
+      "type": "string"
+    },
+    "datestamp": {
+      "type": "string"
+    }
+  }
+}
