@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prices-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prices
+  template:
+    metadata:
+      labels:
+        app: prices
+    spec:
+      containers:
+        - image: as9721/prices:2022-11-16-21-27-32
+          name: prices
+          ports:
+            - containerPort: 8080
+              name: server
+              protocol: TCP
+          env:
+            - name: spring.datasource.url
+              value: jdbc:mysql://primerjalnik-cen-server.mysql.database.azure.com:3306/primerjalnik-cen?useSSL=true
+            - name: spring.datasource.username
+              value: adminRso
+            - name: spring.datasource.password
+              value: Rso2022@
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: prices
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: server
+  selector:
+    app: prices
