@@ -1,7 +1,9 @@
 package com.rso.microservice.api;
 
 import com.google.gson.Gson;
-import com.rso.microservice.api.dto.*;
+import com.rso.microservice.api.dto.ErrorDto;
+import com.rso.microservice.api.dto.MessageDto;
+import com.rso.microservice.api.dto.PricesShopRequestDto;
 import com.rso.microservice.api.mapper.PricesMapper;
 import com.rso.microservice.entity.*;
 import com.rso.microservice.service.PricesService;
@@ -16,10 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -61,94 +60,116 @@ public class PricesAPI {
             @ApiResponse(responseCode = "500", description = "Internal server error",
                     content = @Content(schema = @Schema(implementation = ErrorDto.class)))
     })
-    public ResponseEntity<MessageDto> fetchProductPrices(@RequestHeader(HttpHeaders.AUTHORIZATION) String jwt) {
+    public ResponseEntity<MessageDto> fetchProductPrices(@RequestHeader(HttpHeaders.AUTHORIZATION) String jwt,
+                                                         @RequestParam(required = false, defaultValue = "false") boolean fetchPictures) {
         // todo jwt validation
         // todo move to properties
         String pricesApi = "https://www.nasasuperhrana.si/wp-admin/admin-ajax.php?action=products_data";
+        String pricesImageApi = "https://www.nasasuperhrana.si/wp-content/uploads";
+
         RestTemplate restTemplate = new RestTemplate();
-        String result = restTemplate.getForObject(pricesApi, String.class);
 
-        Gson gson = new Gson();
-        Comparison comparison = gson.fromJson(result, Comparison.class);
+        ResponseEntity<String> response = restTemplate.exchange(pricesApi, HttpMethod.GET, null, String.class);
+        if (response.getStatusCode() == HttpStatus.OK) {
+            String result = response.getBody();
 
-        Pattern patternKg = Pattern.compile("\\/\\d+(\\.\\d+|,\\d+)?kg");
-        Pattern patternG = Pattern.compile("\\/\\d+(\\.\\d+|,\\d+)?g");
-        Pattern patternL = Pattern.compile("\\/\\d+(\\.\\d+|,\\d+)?l");
-        for (com.rso.prices.Product productApi : comparison.getProducts()) {
-            Product product = new Product();
-            product.setName(productApi.getNovoIme());
-            product.setBrand(productApi.getBlagovnaZnamka());
+            Gson gson = new Gson();
+            Comparison comparison = gson.fromJson(result, Comparison.class);
 
-            String enota = productApi.getEnota();
-            Matcher matcherKg = patternKg.matcher(enota);
-            Matcher matcherG = patternG.matcher(enota);
-            Matcher matcherL = patternL.matcher(enota);
-            if (matcherKg.find()) {
-                BigDecimal concentration = BigDecimal.valueOf(
-                        Double.parseDouble(matcherKg.group().substring(enota.indexOf("/") + 1, enota.indexOf("kg"))));
+            Pattern patternKg = Pattern.compile("\\/\\d+(\\.\\d+|,\\d+)?kg");
+            Pattern patternG = Pattern.compile("\\/\\d+(\\.\\d+|,\\d+)?g");
+            Pattern patternL = Pattern.compile("\\/\\d+(\\.\\d+|,\\d+)?l");
+            for (com.rso.prices.Product productApi : comparison.getProducts()) {
+                Product product = new Product();
+                product.setName(productApi.getNovoIme());
+                product.setBrand(productApi.getBlagovnaZnamka());
 
-                product.setConcentration(concentration);
-                product.setConcentrationUnit(ConcentrationUnitEnum.KILOGRAM);
-            } else if (matcherG.find()) {
-                BigDecimal concentration = BigDecimal.valueOf(Double.parseDouble(
-                        matcherG.group().substring(enota.indexOf("/") + 1, enota.indexOf("g"))) / 1000);
+                if (fetchPictures) {
+                    try {
+                        ResponseEntity<byte[]> responseImage = restTemplate.exchange(
+                                String.format("%s/a8_primerjalnik_velike-%d.jpg", pricesImageApi, productApi.getId()),
+                                HttpMethod.GET, null, byte[].class);
+                        if (responseImage.getStatusCode() == HttpStatus.OK) {
+                            product.setImage(responseImage.getBody());
+                        }
+                    } catch (Exception e) {
+                        // ignore all exceptions
+                    }
+                }
 
-                product.setConcentration(concentration);
-                product.setConcentrationUnit(ConcentrationUnitEnum.KILOGRAM);
-            } else if (matcherL.find()) {
-                BigDecimal concentration = BigDecimal.valueOf(
-                        Double.parseDouble(matcherL.group().substring(enota.indexOf("/") + 1, enota.indexOf("l"))));
+                String enota = productApi.getEnota();
+                Matcher matcherKg = patternKg.matcher(enota);
+                Matcher matcherG = patternG.matcher(enota);
+                Matcher matcherL = patternL.matcher(enota);
+                if (matcherKg.find()) {
+                    BigDecimal concentration = BigDecimal.valueOf(
+                            Double.parseDouble(
+                                    matcherKg.group().substring(enota.indexOf("/") + 1, enota.indexOf("kg"))));
 
-                product.setConcentration(concentration);
-                product.setConcentrationUnit(ConcentrationUnitEnum.LITER);
-            } else {
-                continue;
-            }
+                    product.setConcentration(concentration);
+                    product.setConcentrationUnit(ConcentrationUnitEnum.KILOGRAM);
+                } else if (matcherG.find()) {
+                    BigDecimal concentration = BigDecimal.valueOf(Double.parseDouble(
+                            matcherG.group().substring(enota.indexOf("/") + 1, enota.indexOf("g"))) / 1000);
 
-            ProductType productType = new ProductType();
-            productType.setName(productApi.getKategorija());
-            product.setProductType(pricesService.createOrUpdateType(productType));
+                    product.setConcentration(concentration);
+                    product.setConcentrationUnit(ConcentrationUnitEnum.KILOGRAM);
+                } else if (matcherL.find()) {
+                    BigDecimal concentration = BigDecimal.valueOf(
+                            Double.parseDouble(matcherL.group().substring(enota.indexOf("/") + 1, enota.indexOf("l"))));
 
-            product = pricesService.createOrUpdateProduct(product);
+                    product.setConcentration(concentration);
+                    product.setConcentrationUnit(ConcentrationUnitEnum.LITER);
+                } else {
+                    continue;
+                }
 
-            for (Price priceApi : productApi.getPrices()) {
-                Shop shop = new Shop();
-                shop.setName(priceApi.getTrgovina());
-                shop = pricesService.createOrUpdateShop(shop);
+                ProductType productType = new ProductType();
+                productType.setName(productApi.getKategorija());
+                product.setProductType(pricesService.createOrUpdateType(productType));
 
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd. MM. yyyy");
-                // atStartOfDay() because LocalDateTime.parse will fail without time
-                LocalDateTime date = LocalDate.parse(priceApi.getDate(), formatter).atStartOfDay();
-                if (priceApi.getCenaKosarica() != null) {
-                    BigDecimal cenaKosarice = BigDecimal.valueOf(Double.parseDouble(priceApi.getCenaKosarica()));
-                    ProductShop productShop = pricesService.findProductShop(shop, product);
-                    if (productShop != null) {
-                        ProductShopHistory productShopHistory = pricesService.findProductShopHistory(date, productShop);
-                        if (productShopHistory == null) {
-                            productShopHistory = new ProductShopHistory();
+                product = pricesService.createOrUpdateProduct(product);
+
+                for (Price priceApi : productApi.getPrices()) {
+                    Shop shop = new Shop();
+                    shop.setName(priceApi.getTrgovina());
+                    shop = pricesService.createOrUpdateShop(shop);
+
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd. MM. yyyy");
+                    // atStartOfDay() because LocalDateTime.parse will fail without time
+                    LocalDateTime date = LocalDate.parse(priceApi.getDate(), formatter).atStartOfDay();
+                    if (priceApi.getCenaKosarica() != null) {
+                        BigDecimal cenaKosarice = BigDecimal.valueOf(Double.parseDouble(priceApi.getCenaKosarica()));
+                        ProductShop productShop = pricesService.findProductShop(shop, product);
+                        if (productShop != null) {
+                            ProductShopHistory productShopHistory = pricesService.findProductShopHistory(date,
+                                    productShop);
+                            if (productShopHistory == null) {
+                                productShopHistory = new ProductShopHistory();
+                                productShopHistory.setDate(date);
+                                productShopHistory.setPriceEUR(cenaKosarice);
+                                productShopHistory.setProductShop(productShop);
+                                productShopHistory = pricesService.createProductShopHistory(productShopHistory);
+                            }
+                        } else {
+                            productShop = new ProductShop();
+                            productShop.setPriceEUR(cenaKosarice);
+                            productShop.setShop(shop);
+                            productShop.setProduct(product);
+                            productShop = pricesService.createProductShop(productShop);
+
+                            ProductShopHistory productShopHistory = new ProductShopHistory();
                             productShopHistory.setDate(date);
                             productShopHistory.setPriceEUR(cenaKosarice);
                             productShopHistory.setProductShop(productShop);
                             productShopHistory = pricesService.createProductShopHistory(productShopHistory);
                         }
-                    } else {
-                        productShop = new ProductShop();
-                        productShop.setPriceEUR(cenaKosarice);
-                        productShop.setShop(shop);
-                        productShop.setProduct(product);
-                        productShop = pricesService.createProductShop(productShop);
-
-                        ProductShopHistory productShopHistory = new ProductShopHistory();
-                        productShopHistory.setDate(date);
-                        productShopHistory.setPriceEUR(cenaKosarice);
-                        productShopHistory.setProductShop(productShop);
-                        productShopHistory = pricesService.createProductShopHistory(productShopHistory);
                     }
                 }
             }
         }
 
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.status(HttpStatus.OK).body(new MessageDto("fetchProductPrices successful"));
     }
 
     @PostMapping(value = "/shop", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -162,7 +183,9 @@ public class PricesAPI {
             @ApiResponse(responseCode = "500", description = "Internal server error",
                     content = @Content(schema = @Schema(implementation = ErrorDto.class)))
     })
-    public ResponseEntity<MessageDto> fetchProductPricesSpecificShop(@RequestHeader(HttpHeaders.AUTHORIZATION) String jwt, @Valid @RequestBody PricesShopRequestDto pricesShopRequest) {
+    public ResponseEntity<MessageDto> fetchProductPricesSpecificShop(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String jwt,
+            @Valid @RequestBody PricesShopRequestDto pricesShopRequest) {
         // todo: add code here
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }

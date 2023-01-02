@@ -22,6 +22,9 @@ public class ProductDto {
     @JsonProperty("concentration_unit")
     private String concentrationUnit;
 
+    @JsonProperty("image")
+    private byte[] image;
+
     public Long getId() {
         return id;
     }
@@ -68,5 +71,13 @@ public class ProductDto {
 
     public void setConcentrationUnit(String concentrationUnit) {
         this.concentrationUnit = concentrationUnit;
+    }
+
+    public byte[] getImage() {
+        return image;
+    }
+
+    public void setImage(byte[] image) {
+        this.image = image;
     }
 }
