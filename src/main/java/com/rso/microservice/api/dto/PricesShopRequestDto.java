@@ -2,11 +2,11 @@ package com.rso.microservice.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 public class PricesShopRequestDto {
     @JsonProperty("id_shop")
-    @NotBlank(message = "is required")
+    @NotNull(message = "is required")
     private Long idShop;
 
     public Long getIdShop() {
