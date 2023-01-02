@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 public class PricesService {
@@ -44,6 +45,10 @@ public class PricesService {
         }
 
         return productTypeRepository.save(productType);
+    }
+
+    public Optional<Shop> findById(Long id) {
+        return shopRepository.findById(id);
     }
 
     public Shop createOrUpdateShop(Shop shop) {
