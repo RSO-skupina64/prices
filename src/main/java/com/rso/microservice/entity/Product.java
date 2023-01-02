@@ -25,6 +25,10 @@ public class Product {
     @Enumerated(EnumType.STRING)
     private ConcentrationUnitEnum concentrationUnit;
 
+    @Column(name = "IMAGE")
+    @Lob
+    private byte[] image;
+
     @ManyToOne(targetEntity = ProductType.class)
     private ProductType productType;
 
@@ -72,6 +76,14 @@ public class Product {
 
     public void setConcentrationUnit(ConcentrationUnitEnum concentrationUnit) {
         this.concentrationUnit = concentrationUnit;
+    }
+
+    public byte[] getImage() {
+        return image;
+    }
+
+    public void setImage(byte[] image) {
+        this.image = image;
     }
 
     public List<UserFavoriteProduct> getUserFavoriteProducts() {
