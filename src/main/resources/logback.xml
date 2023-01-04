@@ -11,4 +11,7 @@
 	<root level="info">
 		<appender-ref ref="stash"/>
 	</root>
+	<root level="error">
+		<appender-ref ref="stash"/>
+	</root>
 </configuration>

@@ -6,16 +6,19 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.web.client.RestTemplate;
 
 import javax.sql.DataSource;
 
 @Configuration
-public class DataSourceConfig {
-    private static final Logger log = LoggerFactory.getLogger(DataSourceConfig.class);
+@EnableAsync
+public class SpringBootConfig {
+    private static final Logger log = LoggerFactory.getLogger(SpringBootConfig.class);
 
     private final Environment environment;
 
-    public DataSourceConfig(Environment environment) {
+    public SpringBootConfig(Environment environment) {
         this.environment = environment;
     }
 
@@ -31,6 +34,11 @@ public class DataSourceConfig {
         dataSourceBuilder.username(username);
         dataSourceBuilder.password(password);
         return dataSourceBuilder.build();
+    }
+
+    @Bean
+    public RestTemplate getRestTemplate() {
+        return new RestTemplate();
     }
 
 }
