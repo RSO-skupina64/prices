@@ -1,84 +1,201 @@
 package com.rso.microservice.service;
 
 
+import com.google.gson.Gson;
 import com.rso.microservice.entity.*;
-import com.rso.microservice.repository.*;
+import com.rso.prices.Comparison;
+import com.rso.prices.Price;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class PricesService {
+	private static final Logger log = LoggerFactory.getLogger(PricesService.class);
 
-    final ProductRepository productRepository;
-    final ShopRepository shopRepository;
-    final ProductTypeRepository productTypeRepository;
-    final ProductShopRepository productShopRepository;
-    final ProductShopHistoryRepository productShopHistoryRepository;
+	final ProductService productService;
+	final ShopService shopService;
+	final ProductTypeService productTypeService;
+	final ProductShopService productShopService;
+	final ProductShopHistoryService productShopHistoryService;
+	private final RestTemplate restTemplate;
 
-    public PricesService(ProductRepository productRepository, ShopRepository shopRepository,
-                         ProductTypeRepository productTypeRepository, ProductShopRepository productShopRepository,
-                         ProductShopHistoryRepository productShopHistoryRepository) {
-        this.productRepository = productRepository;
-        this.shopRepository = shopRepository;
-        this.productTypeRepository = productTypeRepository;
-        this.productShopRepository = productShopRepository;
-        this.productShopHistoryRepository = productShopHistoryRepository;
-    }
+	@Value("${prices.api.url}")
+	private String pricesApiUrl;
 
-    public Product createOrUpdateProduct(Product product) {
-        List<Product> productList = productRepository.findByProduct(product.getName(), product.getBrand(),
-                product.getConcentration(), product.getConcentrationUnit(), product.getProductType());
-        if (productList != null && productList.size() > 0) {
-            return productList.get(0);
-        }
+	@Value("${prices.images.api.url}")
+	private String pricesImagesApiUrl;
 
-        return productRepository.save(product);
-    }
+	public PricesService(ProductService productService, ShopService shopService,
+						 ProductTypeService productTypeService, ProductShopService productShopService,
+						 ProductShopHistoryService productShopHistoryService, RestTemplate restTemplate) {
+		this.productService = productService;
+		this.shopService = shopService;
+		this.productTypeService = productTypeService;
+		this.productShopService = productShopService;
+		this.productShopHistoryService = productShopHistoryService;
+		this.restTemplate = restTemplate;
+	}
 
-    public ProductType createOrUpdateType(ProductType productType) {
-        List<ProductType> productTypeList = productTypeRepository.findByName(productType.getName());
-        if (productTypeList != null && productTypeList.size() > 0) {
-            return productTypeList.get(0);
-        }
+	@Async
+	public void fetchPricesAllShops(boolean alsoFetchImages) {
+		fetchPricesShop(null, alsoFetchImages);
+	}
 
-        return productTypeRepository.save(productType);
-    }
+	@Async
+	public void fetchPricesShop(Long idShop, boolean alsoFetchImages) {
+		String result = callNasaSuperHrana();
 
-    public Shop createOrUpdateShop(Shop shop) {
-        List<Shop> shopList = shopRepository.findByName(shop.getName());
-        if (shopList != null && shopList.size() > 0) {
-            return shopList.get(0);
-        }
+		Gson gson = new Gson();
+		Comparison comparison = gson.fromJson(result, Comparison.class);
 
-        return shopRepository.save(shop);
-    }
+		Pattern patternKg = Pattern.compile("\\/\\d+(\\.\\d+|,\\d+)?kg");
+		Pattern patternG = Pattern.compile("\\/\\d+(\\.\\d+|,\\d+)?g");
+		Pattern patternL = Pattern.compile("\\/\\d+(\\.\\d+|,\\d+)?l");
+		for (com.rso.prices.Product productApi : comparison.getProducts()) {
+			log.info("processing {}", productApi.getNovoIme());
 
-    public ProductShop findProductShop(Shop shop, Product product) {
-        List<ProductShop> productShopList = productShopRepository.findByShopAndProduct(shop, product);
-        if (productShopList != null && productShopList.size() > 0) {
-            return productShopList.get(0);
-        }
+			if (idShop != null && checkIfProductHasPriceOfThisShop(idShop, productApi)) {
+				log.info("product has no price for specified shop, continuing to next product");
+				continue;
+			}
 
-        return null;
-    }
+			Product product = new Product();
+			product.setName(productApi.getNovoIme());
+			product.setBrand(productApi.getBlagovnaZnamka());
 
-    public ProductShop createProductShop(ProductShop productShop) {
-        return productShopRepository.save(productShop);
-    }
+			if (alsoFetchImages) {
+				byte[] productImage = callNasaSuperHranaImage(productApi.getId());
+				if (productImage != null)
+					product.setImage(productImage);
+			}
 
-    public ProductShopHistory findProductShopHistory(LocalDateTime date, ProductShop productShop) {
-        List<ProductShopHistory> productShopHistoryList = productShopHistoryRepository.findByDateAndProductShop(date,
-                productShop);
-        if (productShopHistoryList != null && productShopHistoryList.size() > 0) {
-            return productShopHistoryList.get(0);
-        }
+			String enota = productApi.getEnota();
+			Matcher matcherKg = patternKg.matcher(enota);
+			Matcher matcherG = patternG.matcher(enota);
+			Matcher matcherL = patternL.matcher(enota);
+			if (matcherKg.find()) {
+				BigDecimal concentration = BigDecimal.valueOf(
+						Double.parseDouble(
+								matcherKg.group().substring(enota.indexOf("/") + 1, enota.indexOf("kg"))));
 
-        return null;
-    }
+				product.setConcentration(concentration);
+				product.setConcentrationUnit(ConcentrationUnitEnum.KILOGRAM);
+			} else if (matcherG.find()) {
+				BigDecimal concentration = BigDecimal.valueOf(Double.parseDouble(
+						matcherG.group().substring(enota.indexOf("/") + 1, enota.indexOf("g"))) / 1000);
 
-    public ProductShopHistory createProductShopHistory(ProductShopHistory productShopHistory) {
-        return productShopHistoryRepository.save(productShopHistory);
-    }
+				product.setConcentration(concentration);
+				product.setConcentrationUnit(ConcentrationUnitEnum.KILOGRAM);
+			} else if (matcherL.find()) {
+				BigDecimal concentration = BigDecimal.valueOf(
+						Double.parseDouble(
+								matcherL.group().substring(enota.indexOf("/") + 1, enota.indexOf("l"))));
+
+				product.setConcentration(concentration);
+				product.setConcentrationUnit(ConcentrationUnitEnum.LITER);
+			} else {
+				continue;
+			}
+
+			ProductType productType = new ProductType();
+			productType.setName(productApi.getKategorija());
+			product.setProductType(productTypeService.createOrUpdateType(productType));
+
+			product = productService.createOrUpdateProduct(product);
+
+			for (Price priceApi : productApi.getPrices()) {
+				Shop shop = new Shop();
+				shop.setName(priceApi.getTrgovina());
+				shop = shopService.createOrUpdateShop(shop);
+
+				DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd. MM. yyyy");
+				// atStartOfDay() because LocalDateTime.parse will fail without time
+				LocalDateTime date = LocalDate.parse(priceApi.getDate(), formatter).atStartOfDay();
+				if (priceApi.getCenaKosarica() != null) {
+					BigDecimal cenaKosarice = BigDecimal.valueOf(
+							Double.parseDouble(priceApi.getCenaKosarica()));
+					ProductShop productShop = productShopService.findProductShop(shop, product);
+					if (productShop != null) {
+						ProductShopHistory productShopHistory = productShopHistoryService.findProductShopHistory(date,
+								productShop);
+						if (productShopHistory == null) {
+							productShopHistory = new ProductShopHistory();
+							productShopHistory.setDate(date);
+							productShopHistory.setPriceEUR(cenaKosarice);
+							productShopHistory.setProductShop(productShop);
+							productShopHistory = productShopHistoryService.createProductShopHistory(productShopHistory);
+						}
+					} else {
+						productShop = new ProductShop();
+						productShop.setPriceEUR(cenaKosarice);
+						productShop.setShop(shop);
+						productShop.setProduct(product);
+						productShop = productShopService.createProductShop(productShop);
+
+						ProductShopHistory productShopHistory = new ProductShopHistory();
+						productShopHistory.setDate(date);
+						productShopHistory.setPriceEUR(cenaKosarice);
+						productShopHistory.setProductShop(productShop);
+						productShopHistory = productShopHistoryService.createProductShopHistory(productShopHistory);
+					}
+				}
+			}
+		}
+	}
+
+	public String callNasaSuperHrana() {
+		log.info("calling: {}", pricesApiUrl);
+		ResponseEntity<String> response = restTemplate.exchange(pricesApiUrl, HttpMethod.GET, null, String.class);
+		log.info("finished calling {}", pricesApiUrl);
+		return response.getBody();
+	}
+
+	public String circuitBreaker() {
+		log.error("called circuit breaker for nasa super hrana");
+		return "";
+	}
+
+	public byte[] callNasaSuperHranaImage(Integer idProduct) {
+		String url = String.format("%s/a8_primerjalnik_velike-%d.jpg", pricesImagesApiUrl, idProduct);
+		log.info("calling: {}", url);
+		ResponseEntity<byte[]> responseImage = restTemplate.exchange(url, HttpMethod.GET, null, byte[].class);
+		log.info("finished calling {}", url);
+		return responseImage.getBody();
+	}
+
+	public byte[] circuitBreaker2(Integer idProduct) {
+		log.error("called circuit breaker for nasa super hrana images");
+		return null;
+	}
+
+	private boolean checkIfProductHasPriceOfThisShop(Long idShop, com.rso.prices.Product productApi) {
+		log.info("check if product has price for shop with id {}", idShop);
+		Optional<Shop> optionalShopRequest = shopService.findById(idShop);
+
+		if (optionalShopRequest.isEmpty()) {
+			// if shop doesn't exist, ignore and continue
+			log.info("shop with id {} doesn't exists", idShop);
+			return true;
+		}
+		Shop shopRequest = optionalShopRequest.get();
+
+		log.info("checking if product {} has price for shop {}", productApi.getNovoIme(), shopRequest.getName());
+		return productApi.getPrices().stream()
+				.anyMatch(price -> price.getTrgovina().equals(shopRequest.getName()));
+	}
+
 }

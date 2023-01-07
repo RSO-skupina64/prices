@@ -1,0 +1,17 @@
+<configuration>
+	<include resource="org/springframework/boot/logging/logback/base.xml"/>
+	<appender name="stash" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+		<destination>${LOGBACK_DESTINATION}</destination>
+		<encoder class="net.logstash.logback.encoder.LogstashEncoder">
+			<includeMdcKeyName>microservice-name</includeMdcKeyName>
+			<includeMdcKeyName>microservice-version</includeMdcKeyName>
+			<includeMdcKeyName>microservice-request-id</includeMdcKeyName>
+		</encoder>
+	</appender>
+	<root level="info">
+		<appender-ref ref="stash"/>
+	</root>
+	<root level="error">
+		<appender-ref ref="stash"/>
+	</root>
+</configuration>
