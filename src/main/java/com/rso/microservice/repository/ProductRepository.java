@@ -14,7 +14,7 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    @Query(value = "SELECT p FROM Product p WHERE p.name = :name AND p.brand = :brand AND p.concentration = :concentration AND p.concentrationUnit = :concentrationUnit AND p.productType = :productType")
+    @Query("SELECT p FROM Product p WHERE p.name = :name AND p.brand = :brand AND p.concentration = :concentration AND p.concentrationUnit = :concentrationUnit AND p.productType = :productType")
     List<Product> findByProduct(@Param("name") String name, @Param("brand") String brand,
                                 @Param("concentration") BigDecimal concentration,
                                 @Param("concentrationUnit") ConcentrationUnitEnum concentrationUnit,
