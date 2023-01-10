@@ -8,10 +8,7 @@
 			<includeMdcKeyName>microservice-request-id</includeMdcKeyName>
 		</encoder>
 	</appender>
-	<root level="info">
-		<appender-ref ref="stash"/>
-	</root>
-	<root level="error">
+	<root levels="info,error">
 		<appender-ref ref="stash"/>
 	</root>
 </configuration>

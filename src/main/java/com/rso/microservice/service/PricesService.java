@@ -2,12 +2,15 @@ package com.rso.microservice.service;
 
 
 import com.google.gson.Gson;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.rso.microservice.entity.*;
+import com.rso.microservice.util.MDCUtil;
 import com.rso.prices.Comparison;
 import com.rso.prices.Price;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -23,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
+@RefreshScope
 public class PricesService {
 	private static final Logger log = LoggerFactory.getLogger(PricesService.class);
 
@@ -51,13 +55,14 @@ public class PricesService {
 	}
 
 	@Async
-	public void fetchPricesAllShops(boolean alsoFetchImages) {
-		fetchPricesShop(null, alsoFetchImages);
+	public void fetchPricesAllShops(boolean alsoFetchImages, String version, String requestId) {
+		fetchPricesShop(null, alsoFetchImages, version, requestId);
 	}
 
 	@Async
-	public void fetchPricesShop(Long idShop, boolean alsoFetchImages) {
-		String result = callNasaSuperHrana();
+	public void fetchPricesShop(Long idShop, boolean alsoFetchImages, String version, String requestId) {
+		MDCUtil.putAll("Prices", version, requestId);
+		String result = callNasaSuperHrana(version, requestId);
 
 		Gson gson = new Gson();
 		Comparison comparison = gson.fromJson(result, Comparison.class);
@@ -78,7 +83,7 @@ public class PricesService {
 			product.setBrand(productApi.getBlagovnaZnamka());
 
 			if (alsoFetchImages) {
-				byte[] productImage = callNasaSuperHranaImage(productApi.getId());
+				byte[] productImage = callNasaSuperHranaImage(productApi.getId(), version, requestId);
 				if (productImage != null)
 					product.setImage(productImage);
 			}
@@ -157,19 +162,24 @@ public class PricesService {
 		}
 	}
 
-	public String callNasaSuperHrana() {
+	@HystrixCommand(fallbackMethod = "circuitBreaker")
+	public String callNasaSuperHrana(String version, String requestId) {
+		MDCUtil.putAll("Prices", version, requestId);
 		log.info("calling: {}", pricesApiUrl);
 		ResponseEntity<String> response = restTemplate.exchange(pricesApiUrl, HttpMethod.GET, null, String.class);
 		log.info("finished calling {}", pricesApiUrl);
 		return response.getBody();
 	}
 
-	public String circuitBreaker() {
+	public String circuitBreaker(String version, String requestId) {
+		MDCUtil.putAll("Prices", version, requestId);
 		log.error("called circuit breaker for nasa super hrana");
 		return "";
 	}
 
-	public byte[] callNasaSuperHranaImage(Integer idProduct) {
+	@HystrixCommand(fallbackMethod = "circuitBreaker2")
+	public byte[] callNasaSuperHranaImage(Integer idProduct, String version, String requestId) {
+		MDCUtil.putAll("Prices", version, requestId);
 		String url = String.format("%s/a8_primerjalnik_velike-%d.jpg", pricesImagesApiUrl, idProduct);
 		log.info("calling: {}", url);
 		ResponseEntity<byte[]> responseImage = restTemplate.exchange(url, HttpMethod.GET, null, byte[].class);
@@ -177,7 +187,8 @@ public class PricesService {
 		return responseImage.getBody();
 	}
 
-	public byte[] circuitBreaker2(Integer idProduct) {
+	public byte[] circuitBreaker2(Integer idProduct, String version, String requestId) {
+		MDCUtil.putAll("Prices", version, requestId);
 		log.error("called circuit breaker for nasa super hrana images");
 		return null;
 	}
