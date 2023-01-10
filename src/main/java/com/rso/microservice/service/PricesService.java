@@ -2,6 +2,7 @@ package com.rso.microservice.service;
 
 
 import com.google.gson.Gson;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.rso.microservice.entity.*;
 import com.rso.prices.Comparison;
 import com.rso.prices.Price;
@@ -157,6 +158,7 @@ public class PricesService {
 		}
 	}
 
+	@HystrixCommand(fallbackMethod = "circuitBreaker")
 	public String callNasaSuperHrana() {
 		log.info("calling: {}", pricesApiUrl);
 		ResponseEntity<String> response = restTemplate.exchange(pricesApiUrl, HttpMethod.GET, null, String.class);
@@ -169,6 +171,7 @@ public class PricesService {
 		return "";
 	}
 
+	@HystrixCommand(fallbackMethod = "circuitBreaker2")
 	public byte[] callNasaSuperHranaImage(Integer idProduct) {
 		String url = String.format("%s/a8_primerjalnik_velike-%d.jpg", pricesImagesApiUrl, idProduct);
 		log.info("calling: {}", url);

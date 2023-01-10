@@ -31,8 +31,6 @@ public class PricesAPI {
 
 	final PricesService pricesService;
 
-	@Autowired
-
 	public PricesAPI(PricesService pricesService) {
 		this.pricesService = pricesService;
 	}
