@@ -3,6 +3,7 @@ package com.rso.microservice.api;
 import com.rso.microservice.api.dto.ErrorDto;
 import com.rso.microservice.api.dto.MessageDto;
 import com.rso.microservice.service.PricesService;
+import com.rso.microservice.util.MDCUtil;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.info.Info;
@@ -50,7 +51,7 @@ public class PricesAPI {
 														 @RequestParam(required = false, defaultValue = "false") boolean fetchPictures) {
 		// todo jwt validation
 		log.info("fetchProductPrices ENTRY");
-		pricesService.fetchPricesAllShops(fetchPictures);
+		pricesService.fetchPricesAllShops(fetchPictures, MDCUtil.get(MDCUtil.MDCUtilKey.MICROSERVICE_VERSION), MDCUtil.get(MDCUtil.MDCUtilKey.REQUEST_ID));
 		log.info("fetchProductPrices EXIT");
 		return ResponseEntity.status(HttpStatus.OK).body(new MessageDto("fetchProductPrices in progress"));
 	}
@@ -73,7 +74,7 @@ public class PricesAPI {
 		// todo jwt validation
 		log.info("fetchProductPricesSpecificShop: ENTRY");
 		Long idShop = Long.parseLong(id);
-		pricesService.fetchPricesShop(idShop, fetchPictures);
+		pricesService.fetchPricesShop(idShop, fetchPictures, MDCUtil.get(MDCUtil.MDCUtilKey.MICROSERVICE_VERSION), MDCUtil.get(MDCUtil.MDCUtilKey.REQUEST_ID));
 		log.info("fetchProductPricesSpecificShop: EXIT");
 		return ResponseEntity.status(HttpStatus.OK).body(new MessageDto("fetchProductPricesSpecificShop in progress"));
 	}
