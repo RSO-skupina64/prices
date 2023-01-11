@@ -27,7 +27,7 @@ spec:
             - name: spring.datasource.password
               value: Rso2022@
             - name: LOGBACK_DESTINATION
-              value: aab8af63-1013-422f-8043-7012c08ace36-ls.logit.io:27798
+              value: b37028e3-1115-4b76-af74-20c97b9c0391-ls.logit.io:25428
             - name: CONFIG_SERVER_URL
               value: http://20.4.194.189:8888
           livenessProbe:
