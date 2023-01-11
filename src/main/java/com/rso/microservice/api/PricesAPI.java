@@ -2,6 +2,7 @@ package com.rso.microservice.api;
 
 import com.rso.microservice.api.dto.ErrorDto;
 import com.rso.microservice.api.dto.MessageDto;
+import com.rso.microservice.service.AuthenticationService;
 import com.rso.microservice.service.PricesService;
 import com.rso.microservice.util.MDCUtil;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
@@ -31,9 +32,11 @@ public class PricesAPI {
     private static final Logger log = LoggerFactory.getLogger(PricesAPI.class);
 
     final PricesService pricesService;
+    final AuthenticationService authenticationService;
 
-    public PricesAPI(PricesService pricesService) {
+    public PricesAPI(PricesService pricesService, AuthenticationService authenticationService) {
         this.pricesService = pricesService;
+        this.authenticationService = authenticationService;
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -49,8 +52,11 @@ public class PricesAPI {
     })
     public ResponseEntity<MessageDto> fetchProductPrices(@RequestHeader(HttpHeaders.AUTHORIZATION) String jwt,
                                                          @RequestParam(required = false, defaultValue = "false") boolean fetchPictures) {
-        // todo jwt validation
         log.info("fetchProductPrices ENTRY");
+        if (!authenticationService.checkUserRoleWrapper(jwt, "Administrator")) {
+            log.info("fetchProductPrices EXIT");
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(null);
+        }
         pricesService.fetchPricesAllShops(fetchPictures, MDCUtil.get(MDCUtil.MDCUtilKey.MICROSERVICE_VERSION),
                 MDCUtil.get(MDCUtil.MDCUtilKey.REQUEST_ID));
         log.info("fetchProductPrices EXIT");
@@ -71,8 +77,11 @@ public class PricesAPI {
     public ResponseEntity<MessageDto> fetchProductPricesSpecificShop(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String jwt, @PathVariable String id,
             @RequestParam(required = false, defaultValue = "false") boolean fetchPictures) {
-        // todo jwt validation
-        log.info("fetchProductPricesSpecificShop: ENTRY");
+        log.info("fetchProductPricesSpecificShop ENTRY");
+        if (!authenticationService.checkUserRoleWrapper(jwt, "Administrator")) {
+            log.info("fetchProductPricesSpecificShop EXIT");
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(null);
+        }
         Long idShop = Long.parseLong(id);
         pricesService.fetchPricesShop(idShop, fetchPictures, MDCUtil.get(MDCUtil.MDCUtilKey.MICROSERVICE_VERSION),
                 MDCUtil.get(MDCUtil.MDCUtilKey.REQUEST_ID));

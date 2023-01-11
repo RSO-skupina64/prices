@@ -7,6 +7,9 @@ public class MessageDto {
     @JsonProperty("message")
     private String message;
 
+    public MessageDto() {
+    }
+
     public MessageDto(String message) {
         this.message = message;
     }
